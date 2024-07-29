@@ -17,13 +17,11 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
     }
 }
 
-public class CreateProductCommanHandler(IDocumentSession session, ILogger<CreateProductCommanHandler> logger)
+public class CreateProductCommanHandler(IDocumentSession session)
     : ICommandHandler<CreateProductCommand, CreateProductResult>
 {
     public async Task<CreateProductResult> Handle(CreateProductCommand command, CancellationToken cancellationToken)
     {
-        logger.LogInformation("CreateProductCommanHandler.handler called with {@command}", command);
-
         var product = new Product
         {
             Name = command.Name,
