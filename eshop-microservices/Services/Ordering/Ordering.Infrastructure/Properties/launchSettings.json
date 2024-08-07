@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ordering.Infrastructure": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
