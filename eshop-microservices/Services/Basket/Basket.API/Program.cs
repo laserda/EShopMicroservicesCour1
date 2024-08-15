@@ -1,6 +1,5 @@
-
-
 using Discount.Grpc;
+using BuildingBlocks.Messaging.MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 var assembly = typeof(Program).Assembly;
@@ -43,6 +42,9 @@ builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(
 
     return handler;
 });
+
+//Async communication Services
+builder.Services.AddMessageBroker(builder.Configuration);
 
 //Cross-cutting services
 builder.Services.AddStackExchangeRedisCache(options =>
