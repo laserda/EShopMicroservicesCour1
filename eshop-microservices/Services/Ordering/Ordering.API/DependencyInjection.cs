@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 
 namespace Ordering.API;
+
 public static class DependencyInjection
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
@@ -14,7 +15,7 @@ public static class DependencyInjection
         services.AddHealthChecks()
             .AddSqlServer(configuration.GetConnectionString("Database")!);
 
-        return services; 
+        return services;
     }
 
     public static WebApplication UseApiServices(this WebApplication app)
@@ -27,7 +28,7 @@ public static class DependencyInjection
             {
                 ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
             });
+
         return app;
     }
-
 }

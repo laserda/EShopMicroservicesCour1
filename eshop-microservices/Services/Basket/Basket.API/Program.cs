@@ -1,13 +1,14 @@
 using Discount.Grpc;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using BuildingBlocks.Messaging.MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
-var assembly = typeof(Program).Assembly;
-var connectionStr = builder.Configuration.GetConnectionString("DataBase")!;
-var connectionStrRedis = builder.Configuration.GetConnectionString("Redis")!;
-//Add services to the container
 
-//Application services
+// Add services to the container.
+
+//Application Services
+var assembly = typeof(Program).Assembly;
 builder.Services.AddCarter();
 builder.Services.AddMediatR(config =>
 {
@@ -16,23 +17,28 @@ builder.Services.AddMediatR(config =>
     config.AddOpenBehavior(typeof(LoggingBehavior<,>));
 });
 
-// Data services
-builder.Services.AddMarten(option =>
+//Data Services
+builder.Services.AddMarten(opts =>
 {
-    option.Connection(connectionStr);
-    option.Schema.For<ShoppingCart>().Identity(x => x.UserName);
+    opts.Connection(builder.Configuration.GetConnectionString("Database")!);
+    opts.Schema.For<ShoppingCart>().Identity(x => x.UserName);
 }).UseLightweightSessions();
 
 builder.Services.AddScoped<IBasketRepository, BasketRepository>();
 builder.Services.Decorate<IBasketRepository, CachedBasketRepository>();
 
-//Grpc service
-builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(option =>
+builder.Services.AddStackExchangeRedisCache(options =>
 {
-    option.Address = new Uri(builder.Configuration["GrpcSetting:DiscountUrl"]!);
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    //options.InstanceName = "Basket";
+});
+
+//Grpc Services
+builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(options =>
+{
+    options.Address = new Uri(builder.Configuration["GrpcSettings:DiscountUrl"]!);
 })
-    //Ne pas utilisé ce code en production
-    .ConfigurePrimaryHttpMessageHandler(() =>
+.ConfigurePrimaryHttpMessageHandler(() =>
 {
     var handler = new HttpClientHandler
     {
@@ -43,28 +49,21 @@ builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(
     return handler;
 });
 
-//Async communication Services
+//Async Communication Services
 builder.Services.AddMessageBroker(builder.Configuration);
 
-//Cross-cutting services
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = connectionStrRedis;
-});
-
+//Cross-Cutting Services
 builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionStr)
-    .AddRedis(connectionStrRedis);
+    .AddNpgSql(builder.Configuration.GetConnectionString("Database")!)
+    .AddRedis(builder.Configuration.GetConnectionString("Redis")!);
 
 var app = builder.Build();
 
-//Configure the HTTPS request pipeline
+// Configure the HTTP request pipeline.
 app.MapCarter();
-
-app.UseExceptionHandler(option => { });
-
+app.UseExceptionHandler(options => { });
 app.UseHealthChecks("/health",
     new HealthCheckOptions
     {
